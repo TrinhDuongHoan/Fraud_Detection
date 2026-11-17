@@ -1,7 +1,7 @@
 PYTHON := .venv/bin/python
 CONFIG ?= configs/default.yaml
 
-.PHONY: install test lint notebooks smoke run prepare train predict
+.PHONY: install test lint notebooks compare compare-smoke smoke run prepare train predict
 install:
 	python3 -m venv .venv
 	$(PYTHON) -m pip install -r requirements-dev.txt
@@ -16,6 +16,12 @@ lint:
 
 notebooks:
 	$(PYTHON) scripts/run_notebooks.py
+
+compare:
+	$(PYTHON) -m fraud_detection compare --config configs/comparison.yaml
+
+compare-smoke:
+	$(PYTHON) -m fraud_detection compare --config configs/comparison_smoke.yaml
 
 smoke:
 	$(PYTHON) -m fraud_detection run --config configs/smoke.yaml

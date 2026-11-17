@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from fraud_detection.comparison import compare_models
 from fraud_detection.config import Config
 from fraud_detection.data import prepare, validate_transactions
 from fraud_detection.inference import predict
@@ -14,7 +15,7 @@ from fraud_detection.reporting import eda
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fraud detection data science pipeline")
-    parser.add_argument("command", choices=["prepare", "eda", "train", "predict", "run"])
+    parser.add_argument("command", choices=["prepare", "eda", "train", "compare", "predict", "run"])
     parser.add_argument("--config", default="configs/default.yaml")
     parser.add_argument("--input", type=Path, help="Joined inference CSV or Parquet")
     parser.add_argument("--state", type=Path, help="Persistent online review state across batches")
@@ -36,7 +37,10 @@ def main() -> None:
         frame = pd.read_parquet(Path(config.processed_dir) / "train.parquet")
         validate_transactions(frame, labeled=True)
         eda(frame, Path(config.output_dir) / "eda")
-    if args.command in {"train", "run"}:
-        train(config)
+    if args.command in {"train", "compare", "run"}:
+        if config.model_candidates or args.command == "compare":
+            compare_models(config)
+        else:
+            train(config)
     if args.command in {"predict", "run"}:
         predict(config, args.input, args.state)
