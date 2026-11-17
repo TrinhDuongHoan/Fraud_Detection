@@ -6,3 +6,6 @@ lightgbm>=4.7,<5
 matplotlib>=3.10,<4
 PyYAML>=6,<7
 joblib>=1.4,<2
+xgboost-cpu>=3.1,<4; platform_machine == "x86_64" or platform_machine == "AMD64"
+xgboost>=3.1,<4; platform_machine != "x86_64" and platform_machine != "AMD64"
+catboost>=1.2.8,<2
