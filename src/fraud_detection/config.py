@@ -22,6 +22,7 @@ class Config:
     threads: int = 4
     early_stopping_rounds: int = 60
     candidates: list[dict] = field(default_factory=lambda: [{"n_estimators": 600}])
+    model_candidates: dict[str, list[dict]] = field(default_factory=dict)
 
     def __post_init__(self):
         fractions = [self.train_fraction, self.tuning_fraction, self.calibration_fraction]
@@ -37,6 +38,14 @@ class Config:
             raise ValueError("row_limit must be positive")
         if self.early_stopping_rounds < 1:
             raise ValueError("early_stopping_rounds must be positive")
+        supported = {"logistic", "random_forest", "lightgbm", "xgboost", "catboost"}
+        if set(self.model_candidates) - supported:
+            raise ValueError("Unsupported model family in model_candidates")
+        if any(
+            not trials or any(not isinstance(p, dict) for p in trials)
+            for trials in self.model_candidates.values()
+        ):
+            raise ValueError("Each model family requires a nonempty list of parameter dictionaries")
 
     @classmethod
     def load(cls, path: str | Path) -> "Config":
