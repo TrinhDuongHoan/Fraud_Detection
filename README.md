@@ -1,8 +1,8 @@
 # Fraud Detection
 
-Pipeline data science cho IEEE-CIS, bám theo [bài toán kinh doanh](reports/01_problem_definition.md): chấm điểm rủi ro và review tối đa 1% giao dịch mỗi ngày.
+An end-to-end data science pipeline for IEEE-CIS transaction fraud detection, aligned with the [business problem](reports/01_problem_definition.md): score transaction risk and prioritize manual review within a daily capacity of 1% of transactions.
 
-[Kết quả chạy toàn bộ dữ liệu](reports/02_results.md): holdout AP 0,5384, ROC-AUC 0,8966; review precision 83,43% tại tỷ lệ review 0,784%.
+[Full dataset results](reports/02_results.md): holdout average precision **0.5384**, ROC-AUC **0.8966**, and review precision **83.43%** at a **0.784%** review rate.
 
 ## Analytical Notebooks
 
@@ -10,18 +10,18 @@ The notebooks present the analysis as a linear research workflow, with English d
 
 | Notebook | Analysis |
 | --- | --- |
-| [01 · Data Quality and EDA](notebooks/01_data_quality_eda.ipynb) | Business assumptions, source provenance, missingness, class imbalance, temporal variation and group profiles |
-| [02 · Features and Temporal Partitions](notebooks/02_features_temporal_split.ipynb) | Chronological evaluation, transaction-level features, fitted encoding and leakage boundaries |
-| [03 · Training and Calibration](notebooks/03_training_calibration.ipynb) | Direct candidate fitting, selected-model refit, sigmoid calibration, threshold selection and holdout evaluation |
-| [04 · Evaluation and Inference](notebooks/04_evaluation_inference.ipynb) | Baselines, PR/ROC, online review allocation, batch state, expected costs, drift and unlabeled inference |
+| [01 · Data Quality and EDA](notebooks/data_quality_eda.ipynb) | Business assumptions, source provenance, missingness, class imbalance, temporal variation and group profiles |
+| [02 · Features and Temporal Partitions](notebooks/features_temporal_split.ipynb) | Chronological evaluation, transaction-level features, fitted encoding and leakage boundaries |
+| [03 · Training and Calibration](notebooks/training_calibration.ipynb) | Direct candidate fitting, selected-model refit, sigmoid calibration, threshold selection and holdout evaluation |
+| [04 · Evaluation and Inference](notebooks/evaluation_inference.ipynb) | Baselines, PR/ROC, online review allocation, batch state, expected costs, drift and unlabeled inference |
 
 Notebooks 01–02 analyze the prepared data and CLI artifacts. Notebook 03 trains directly on the complete dataset and stores its artifact in `artifacts/notebook/full`. Notebook 04 evaluates that artifact and generates its test predictions and submission. Model training follows the cell sequence without an execution-mode flag.
 
 `make notebooks` executes the complete sequence and saves cell outputs, including full model training and inference.
 
-## Chạy project
+## Running the Project
 
-Python 3.11 trở lên, CPU, khoảng 4–6 GB RAM trống cho cấu hình đầy đủ.
+The full configuration requires Python 3.11 or later, a CPU, and approximately 4–6 GB of available RAM.
 
 ```bash
 make install
@@ -30,9 +30,9 @@ make smoke
 make run
 ```
 
-`make smoke` chạy 50.000 dòng đầu của mỗi tập, lưu riêng tại `artifacts/smoke`. `make run` chạy toàn bộ dữ liệu, lưu tại `artifacts/full`. Hai chế độ không dùng chung dữ liệu đã xử lý hoặc mô hình. Thời gian chạy phụ thuộc CPU và dung lượng RAM.
+`make smoke` processes the first 50,000 rows of each dataset and writes results to `artifacts/smoke`. `make run` processes the complete datasets and writes results to `artifacts/full`. Each configuration has separate processed data and model artifacts. Runtime depends on CPU performance and available memory.
 
-Đặt các file gốc trong `data/raw/`:
+The expected source files in `data/raw/` are:
 
 ```text
 train_transaction.csv
@@ -42,7 +42,7 @@ test_identity.csv
 sample_submission.csv
 ```
 
-Chạy từng bước:
+Individual pipeline stages are available through the CLI:
 
 ```bash
 .venv/bin/python -m fraud_detection prepare --config configs/default.yaml
@@ -51,24 +51,24 @@ Chạy từng bước:
 .venv/bin/python -m fraud_detection predict --config configs/default.yaml
 ```
 
-## Quy trình
+## Pipeline
 
-1. Kiểm tra schema, khóa trùng, nhãn, thời gian và số tiền; chuẩn hóa `id-XX` thành `id_XX`; left join identity theo TransactionID. Đọc CSV theo chunk, lưu Parquet và manifest SHA-256; không sửa dữ liệu raw.
-2. EDA: tỷ lệ fraud, lưu lượng theo ngày, phân phối số tiền, missing values, cardinality, cột hằng và biểu đồ.
-3. Chia các ngày theo thời gian: train khoảng 60%, tuning 15%, calibration 10%, holdout 15%. Tỷ lệ thực tế có thể khác nhẹ vì không cắt ngang ngày. Mỗi tập phải có cả hai lớp.
-4. Tạo feature số tiền, giờ/ngày tương đối, missing count, email match. Category vocabulary, frequency encoding và loại cột hằng chỉ học trên tập fit. Category mới được LightGBM xử lý như missing; frequency mới bằng 0. Không dùng TransactionID hoặc thời gian tuyệt đối làm feature.
-5. So sánh cấu hình LightGBM bằng average precision trên tuning, dùng early stopping theo cùng metric. Refit train + tuning với số cây đã chọn. Có baseline xác suất cố định và logistic regression dùng nhóm feature nhỏ để đối chiếu.
-6. Fit sigmoid calibration và chọn ngưỡng tối đa hóa tiết kiệm kỳ vọng trên calibration. Khóa mô hình, calibrator và ngưỡng trước khi xem holdout.
-7. Đánh giá average precision, ROC-AUC, log loss, Brier score, calibration, precision/recall trong review, chi phí và độ nhạy giả định. Báo cáo feature importance và drift.
-8. Dự đoán test theo chunk, xuất xác suất, hành động và submission đúng thứ tự sample_submission. Không gửi submission lên dịch vụ bên ngoài.
+1. Validate schemas, duplicate keys, labels, timestamps and amounts; normalize `id-XX` to `id_XX`; and left join identity attributes on TransactionID. CSV files are processed in chunks and saved as Parquet, with SHA-256 source hashes recorded in a manifest. Raw files remain unchanged.
+2. Analyze fraud prevalence, daily transaction volume, amount distributions, missingness, cardinality and constant columns, with supporting visualizations.
+3. Partition complete days chronologically into approximately 60% training, 15% tuning, 10% calibration and 15% holdout. Actual proportions vary slightly because days are not split between partitions. Each partition must contain both classes.
+4. Derive amount features, relative hour and weekday, missing-value counts and email-domain agreement. Category vocabularies, frequency encodings and constant-feature removal are fitted only on the fitting partition. Unseen categories become missing categorical values; unseen frequencies become zero. TransactionID and absolute transaction time are excluded from predictors.
+5. Compare LightGBM configurations using tuning average precision, with early stopping on the same metric. Refit on training plus tuning with the selected iteration count. A constant-probability baseline and logistic regression on a small feature subset provide reference performance.
+6. Fit sigmoid calibration and select the review threshold that maximizes expected savings on the calibration partition. Freeze the classifier, calibrator and threshold before holdout evaluation.
+7. Evaluate average precision, ROC-AUC, log loss, Brier score, calibration, review precision and recall, expected costs and sensitivity to business assumptions. Report feature importance and distribution drift.
+8. Score unlabeled test data in chunks and export probabilities, review actions and a submission aligned with sample_submission order. Submission files are generated locally.
 
-## Review không dùng tương lai
+## Review Policy Without Future Information
 
-Sắp xếp giao dịch theo `(TransactionDT, TransactionID)`. Sau `n` giao dịch của ngày, số review không vượt `floor(0.01 × n)`. Giao dịch chỉ được chọn nếu còn quota và xác suất đạt ngưỡng đã chọn trên calibration. Quota reset vào ngày tương đối tiếp theo.
+Transactions are processed in `(TransactionDT, TransactionID)` order. After `n` transactions within a day, cumulative reviews cannot exceed `floor(0.01 × n)`. A transaction is selected only when capacity remains and its probability exceeds the threshold selected on calibration data. The quota resets at the next relative day.
 
-Quy tắc bảo đảm giới hạn 1% ở mọi thời điểm, nhưng có thể bỏ lỡ fraud đến sớm hoặc để trống quota. Một ngày dưới 100 giao dịch có quota bằng 0. `daily_top_k` trong báo cáo chỉ là benchmark hồi cứu, cần biết toàn bộ giao dịch trong ngày nên không dùng làm chính sách vận hành.
+This rule enforces the 1% limit at every point in the event stream, but it can miss early fraud or leave capacity unused. A day with fewer than 100 transactions has zero review capacity. The reported `daily_top_k` result is a retrospective benchmark that requires all scores for a completed day; it is not an online decision policy.
 
-Với nhiều batch, dùng cùng file trạng thái và đưa batch theo thứ tự thời gian:
+Chronological batches share a persistent state file:
 
 ```bash
 .venv/bin/python -m fraud_detection predict \
@@ -77,59 +77,61 @@ Với nhiều batch, dùng cùng file trạng thái và đưa batch theo thứ t
   --state artifacts/full/review_state.json
 ```
 
-Input phải là bảng transaction đã join identity, có schema như dữ liệu test đã chuẩn bị và không chứa `isFraud`. Batch sau phải có khóa `(TransactionDT, TransactionID)` lớn hơn batch trước. Một luồng xử lý sở hữu một state; chưa hỗ trợ nhiều worker đồng thời. Chạy lại cùng batch với state đã cập nhật sẽ bị từ chối. Mỗi lần predict ghi đè các file dự đoán trong output_dir; lưu riêng các output cần giữ. Không truyền `--state` thì quota bắt đầu lại từ đầu, phù hợp một file test độc lập.
+Inference input contains transactions already joined with identity attributes, follows the prepared test schema, and excludes `isFraud`. Every batch must begin after the previous batch's final `(TransactionDT, TransactionID)` key. Each state belongs to a single processing stream; concurrent workers are not supported. Replaying a batch against an updated state is rejected.
 
-## Kết quả sinh ra
+Each prediction run overwrites the prediction files in `output_dir`, so retained results need separate storage. Without `--state`, the quota starts from an empty state, as expected for a standalone test file.
 
-| Đường dẫn trong output_dir | Nội dung |
+## Generated Artifacts
+
+| Path within output_dir | Contents |
 | --- | --- |
-| `model_card.md` | Báo cáo tiếng Việt, kết quả, giả định và giới hạn |
-| `eda/` | Tổng quan dữ liệu, profile cột, thống kê ngày, biểu đồ |
-| `model.joblib` | Feature builder, LightGBM, calibrator và chính sách |
-| `run.json` | Config, phiên bản thư viện, hash dữ liệu và model |
-| `splits.json`, `candidate_scores.csv`, `selection.json` | Chia tập và lựa chọn cấu hình |
-| `metrics.json`, `evaluation.png` | Baseline, chỉ số holdout và biểu đồ |
-| `holdout_predictions.parquet`, `daily_policy.csv` | Điểm số và quota thực tế trên holdout |
-| `threshold_search.csv`, `cost_sensitivity.csv` | Tìm ngưỡng và phân tích giả định chi phí |
-| `feature_importance.csv` | Importance theo split gain |
-| `reference.json`, `drift_holdout.csv`, `drift_test.csv` | Phân phối tham chiếu và PSI |
-| `predictions.csv` | TransactionID, thời gian, risk_score, manual_review, action |
-| `submission.csv` | TransactionID và xác suất isFraud |
+| `model_card.md` | Vietnamese model report covering results, assumptions and limitations |
+| `eda/` | Data summary, column profiles, daily statistics and plots |
+| `model.joblib` | Feature builder, LightGBM classifier, calibrator and policy settings |
+| `run.json` | Configuration, package versions, and data and model hashes |
+| `splits.json`, `candidate_scores.csv`, `selection.json` | Temporal partitions and model selection results |
+| `metrics.json`, `evaluation.png` | Baselines, holdout metrics and evaluation plots |
+| `holdout_predictions.parquet`, `daily_policy.csv` | Holdout scores and observed review allocation |
+| `threshold_search.csv`, `cost_sensitivity.csv` | Threshold selection and cost-assumption analysis |
+| `feature_importance.csv` | Feature importance measured by split gain |
+| `reference.json`, `drift_holdout.csv`, `drift_test.csv` | Reference distributions and population stability index |
+| `predictions.csv` | TransactionID, transaction time, risk_score, manual_review and action |
+| `submission.csv` | TransactionID and predicted isFraud probability |
 
-`model.joblib` là artifact Python nội bộ; chỉ load artifact từ nguồn tin cậy. `requirements-lock.txt` ghi lại môi trường Python 3.14.4 đã kiểm thử; `requirements.txt` khai báo khoảng phiên bản hỗ trợ cho các bản Python khác.
+`model.joblib` is a serialized Python artifact and should only be loaded from trusted sources. `requirements-lock.txt` records the tested Python 3.14.4 environment; `requirements.txt` specifies supported dependency ranges for other Python versions.
 
-## Cấu trúc code
+## Project Structure
 
 ```text
-configs/                  Cấu hình full và smoke
-notebooks/                Bốn notebook phân tích, training và đánh giá có output
-scripts/run_notebooks.py  Thực thi notebook bằng môi trường Python đang dùng
+configs/                  Full and smoke configurations
+notebooks/                Four analysis, training and evaluation notebooks with saved outputs
+scripts/run_notebooks.py  Notebook execution using the active Python environment
 src/fraud_detection/
-  config.py               Cấu hình và validation
-  data.py                 Kiểm tra dữ liệu, join, Parquet, manifest
-  features.py             Feature engineering và encoding
-  split.py                Chia tập theo ngày
-  modeling.py             Baseline, LightGBM, model artifact
-  policy.py               Quota online và mô phỏng chi phí
-  metrics.py              Chỉ số phân loại
-  monitoring.py           Tham chiếu phân phối và PSI
-  reporting.py            EDA, biểu đồ, model card
-  pipeline.py             Điều phối huấn luyện và đánh giá
-  inference.py            Batch prediction và submission
-  cli.py                  Command line
-tests/                    Kiểm tra leakage, quota, schema và toàn pipeline
+  config.py               Configuration and validation
+  data.py                 Data validation, identity joins, Parquet and manifests
+  features.py             Feature engineering and encoding
+  split.py                Chronological partitions by day
+  modeling.py             Baselines, LightGBM and model artifact
+  policy.py               Online review quotas and expected costs
+  metrics.py              Classification metrics
+  monitoring.py           Reference distributions and PSI
+  reporting.py            EDA, evaluation plots and model card
+  pipeline.py             Training and evaluation orchestration
+  inference.py            Batch prediction and submission generation
+  cli.py                  Command-line interface
+tests/                    Leakage, quota, schema and end-to-end pipeline checks
 ```
 
-## Giả định cần giữ rõ
+## Assumptions and Limitations
 
-- Tổn thất mỗi fraud là $100, review $1, sensitivity 80%; đây là giả định trong tài liệu bài toán. Tiết kiệm báo cáo là kỳ vọng mô phỏng, chưa phải hiệu quả vận hành thực tế.
-- Chỉ Approve và Manual Review, chưa automatic blocking nên không áp chi phí chặn nhầm $5.
-- TransactionDT không có mốc lịch; các ngày/giờ là tương đối. Không suy diễn múi giờ hay thứ trong tuần thực.
-- C/D/V và identity là các feature ẩn danh. Cần xác nhận tính sẵn có tại thời điểm giao dịch, độ trễ nhãn và thời gian xử lý review trước khi triển khai.
-- Mô hình cuối fit trên train + tuning; calibration và holdout được giữ riêng. Không tự động refit toàn bộ nhãn sau đánh giá vì sẽ thay đổi calibration và ngưỡng đã kiểm chứng.
-- PSI lấy calibration làm tham chiếu; mức 0.2 gợi ý điều tra, không tự động retrain. Khi có nhãn mới, cần đo lại recall, chi phí và calibration.
+- The business assumptions assign a $100 loss per fraud, a $1 review cost and 80% review sensitivity. Reported savings are simulated expectations rather than measured production outcomes.
+- The policy supports Approve and Manual Review. Automatic blocking is outside its scope, so the $5 false-blocking cost does not enter the calculation.
+- TransactionDT has no known calendar origin. Days and hours are relative and do not establish an actual timezone or calendar weekday.
+- C/D/V and identity attributes are anonymized. Production applicability depends on their availability at decision time, label delays and review-processing latency.
+- The final classifier is fitted on training plus tuning, with calibration and holdout kept separate. Refitting on all labeled data would change the evaluated probabilities and threshold.
+- PSI uses calibration as the reference period. A value of 0.2 is an investigation heuristic, not an automatic retraining trigger. New labels support renewed assessment of recall, costs and calibration.
 
-Kiểm tra code:
+Code quality and test checks are available through:
 
 ```bash
 make lint
