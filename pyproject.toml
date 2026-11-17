@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fraud-detection"
+version = "0.1.0"
+description = "Temporal fraud modeling and capacity-constrained review"
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[project.scripts]
+fraud = "fraud_detection.cli:main"
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements.txt"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

@@ -1,0 +1,8 @@
+numpy>=2.2,<3
+pandas>=2.2,<4
+pyarrow>=19,<25
+scikit-learn>=1.6,<2
+lightgbm>=4.7,<5
+matplotlib>=3.10,<4
+PyYAML>=6,<7
+joblib>=1.4,<2
