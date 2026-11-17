@@ -1,0 +1,28 @@
+seed: 42
+raw_dir: data/raw
+processed_dir: data/processed
+output_dir: artifacts/full
+chunk_size: 50000
+row_limit: null
+train_fraction: 0.60
+tuning_fraction: 0.15
+calibration_fraction: 0.10
+review_rate: 0.01
+fraud_loss: 100.0
+review_cost: 1.0
+review_sensitivity: 0.80
+threads: 4
+early_stopping_rounds: 60
+candidates:
+  - n_estimators: 600
+    learning_rate: 0.05
+    num_leaves: 31
+    min_child_samples: 100
+    colsample_bytree: 0.85
+    reg_lambda: 5.0
+  - n_estimators: 600
+    learning_rate: 0.05
+    num_leaves: 63
+    min_child_samples: 150
+    colsample_bytree: 0.85
+    reg_lambda: 10.0

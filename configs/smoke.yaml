@@ -1,0 +1,22 @@
+seed: 42
+raw_dir: data/raw
+processed_dir: data/processed/smoke
+output_dir: artifacts/smoke
+chunk_size: 10000
+row_limit: 50000
+train_fraction: 0.60
+tuning_fraction: 0.15
+calibration_fraction: 0.10
+review_rate: 0.01
+fraud_loss: 100.0
+review_cost: 1.0
+review_sensitivity: 0.80
+threads: 4
+early_stopping_rounds: 15
+candidates:
+  - n_estimators: 80
+    learning_rate: 0.08
+    num_leaves: 15
+    min_child_samples: 50
+    colsample_bytree: 0.85
+    reg_lambda: 5.0
